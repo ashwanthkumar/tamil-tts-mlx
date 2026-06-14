@@ -41,6 +41,7 @@ def prepare(
     val_size: int = 100,
     limit: int | None = None,
     split: str = "train",
+    streaming: bool = False,
 ) -> None:
     # Heavy imports live inside the function so `--help` works without the `train` extras.
     try:
@@ -59,8 +60,12 @@ def prepare(
     wav_dir = out_dir / "wavs"
     wav_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Loading {DATASET_ID} (split={split}) ...", file=sys.stderr)
-    ds = load_dataset(DATASET_ID, split=split)
+    print(
+        f"Loading {DATASET_ID} (split={split}, streaming={streaming}) ...",
+        file=sys.stderr,
+    )
+    # Streaming avoids downloading all 8.4GB up front; ideal for --limit smoke tests.
+    ds = load_dataset(DATASET_ID, split=split, streaming=streaming)
     columns = list(ds.features.keys())
     print(f"Columns: {columns}", file=sys.stderr)
 
@@ -147,6 +152,11 @@ def main() -> None:
     p.add_argument("--val-size", type=int, default=100, help="number of clips held out for validation")
     p.add_argument("--limit", type=int, default=None, help="cap clips (for a quick smoke test)")
     p.add_argument("--split", default="train", help="HF dataset split to read (default: train)")
+    p.add_argument(
+        "--streaming",
+        action="store_true",
+        help="stream from the Hub instead of downloading all 8.4GB (use with --limit)",
+    )
     args = p.parse_args()
 
     prepare(
@@ -156,6 +166,7 @@ def main() -> None:
         val_size=args.val_size,
         limit=args.limit,
         split=args.split,
+        streaming=args.streaming,
     )
 
 

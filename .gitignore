@@ -16,6 +16,8 @@ data/wavs/
 data/*.parquet
 data/metadata*.csv
 runs/
+runs_smoke/
+data_smoke/
 output/
 checkpoints/
 *.pth

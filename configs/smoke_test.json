@@ -1,0 +1,26 @@
+{
+  "run_name": "tamil_smoke",
+  "data_path": "data_smoke",
+  "output_path": "runs_smoke",
+  "sample_rate": 22050,
+
+  "batch_size": 4,
+  "eval_batch_size": 2,
+  "epochs": 1,
+  "lr_gen": 0.0002,
+  "lr_disc": 0.0002,
+
+  "use_phonemes": true,
+  "phoneme_language": "ta",
+  "phonemizer": "espeak",
+  "add_blank": true,
+
+  "mixed_precision": false,
+  "save_step": 5,
+  "save_n_checkpoints": 2,
+  "print_step": 1,
+  "num_loader_workers": 0,
+
+  "hidden_channels": 96,
+  "comment": "Tiny config to validate the training pipeline mechanics (NOT a real voice)."
+}

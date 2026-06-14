@@ -6,8 +6,9 @@ with both a **Python** and a **Rust** SDK.
 
 Design goals: tiny model (~15–30 MB), real-time-or-faster on CPU, no GPU needed at inference.
 
-> Status: **scaffold + pipeline**. Training is a long run you drive on Apple Silicon (see below).
-> The repo gives you everything to prepare data, train, export ONNX, and run inference.
+> Status: **pipeline validated end-to-end on an M2** — install, a real VITS training step on MPS,
+> ONNX export, and both SDKs were smoke-tested with `tests/make_synthetic_dataset.py`. What
+> remains is the *real* training run to convergence (a long job you drive on the M1 Studio).
 
 [VITS]: https://arxiv.org/abs/2106.06103
 [IndicTTS Tamil]: https://huggingface.co/datasets/SPRINGLab/IndicTTS_Tamil

@@ -19,11 +19,17 @@ dependencies = [
 # Heavy deps needed only for data prep + TRAINING (use the M1 Studio for this).
 train = [
     "coqui-tts>=0.25.1",
-    "torch>=2.2",
+    # torch >=2.9 forces the torchcodec dependency (needs specific FFmpeg); stay below it
+    # so coqui-tts uses the torchaudio IO path.
+    "torch>=2.6,<2.9",
+    "torchaudio>=2.6,<2.9",
+    # coqui-tts's XTTS/tortoise code imports symbols removed in transformers 5.x
+    "transformers>=4.40,<5",
     "datasets>=2.18",
     "librosa>=0.10",
     "tqdm>=4.66",
     "pandas>=2.0",
+    "onnx>=1.16",
 ]
 
 [project.scripts]
