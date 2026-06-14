@@ -328,8 +328,8 @@ def main() -> None:
         type=int,
         default=0,
         help="(low-disk) stop after N consecutive shards yield no wanted-speaker clips. "
-        "This corpus is speaker-contiguous (female = first ~6 shards), so --stop-after-empty 2 "
-        "skips the male shards and roughly halves the download. 0 = scan all shards.",
+        "Faster, but LOSSY on this corpus: most female clips are in the first ~6 shards, yet some "
+        "are scattered later (e.g. shard 14/15/16), so early-stop drops them. Default 0 = scan all.",
     )
     args = p.parse_args()
 
