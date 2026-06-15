@@ -7,7 +7,7 @@
 //! ```no_run
 //! use tamil_tts::mlx_ns_tts::MlxNsTts;
 //! let mut tts = MlxNsTts::from_prefix("models/tamil_ns")?;
-//! tts.save("வணக்கம்", "hello.wav", 1.0)?;
+//! tts.save("வணக்கம்", "hello.wav", 1.0)?;   // 3rd arg = speed: >1 faster, <1 slower
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
@@ -74,7 +74,10 @@ impl MlxNsTts {
         ids
     }
 
+    /// `speed` is a duration multiplier applied host-side: >1 shortens (faster),
+    /// <1 lengthens (slower). Non-positive values fall back to 1.0 to avoid div-by-zero.
     pub fn synthesize(&mut self, text: &str, speed: f32) -> Result<Vec<f32>> {
+        let speed = if speed > 0.0 { speed } else { 1.0 };
         let tokens = self.encode(text);
         let tt = tokens.len();
 

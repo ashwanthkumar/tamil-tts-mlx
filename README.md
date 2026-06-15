@@ -33,8 +33,12 @@ cd rust
 cargo run --release --example synthesize_ns -- "வணக்கம்" out.wav ../models/tamil_ns
 ```
 
+**Speaking rate** — both SDKs take a `speed` multiplier (>1 faster/shorter, <1 slower/longer),
+applied to predicted durations at inference (no retrain): `--speed 0.8` (Python) or a trailing
+`1.25` arg (Rust). Explicit pitch/energy control is planned for v0.2.
+
 The SDKs run `text → enc_dur → (length-regulate) → decoder → mel → hifigan → wav`, entirely on CPU.
-(Griffin-Lim is a built-in fallback if `hifigan.onnx` is absent.)
+`hifigan.onnx` (the neural vocoder) is required.
 
 ## How it works / reproduce it
 

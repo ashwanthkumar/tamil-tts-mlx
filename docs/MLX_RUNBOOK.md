@@ -69,10 +69,15 @@ uv run python -m tamiltts.mlx.export_hifigan --weights models/hifigan_lj.bin --o
 # 6. generate (CPU, any platform)
 uv run python -m tamiltts.mlx.onnx_infer_ns -m models/tamil_ns --text "வணக்கம், இது தமிழ் பேச்சு." -o out.wav
 cd rust && cargo run --release --example synthesize_ns -- "வணக்கம்" out.wav ../models/tamil_ns
+
+# speaking-rate control: scale predicted durations host-side (>1 faster/shorter, <1 slower/longer)
+uv run python -m tamiltts.mlx.onnx_infer_ns -m models/tamil_ns --text "வணக்கம்" -o slow.wav --speed 0.8
+cargo run --release --example synthesize_ns -- "வணக்கம்" fast.wav ../models/tamil_ns 1.25
 ```
 
 `onnx_infer_ns` requires `models/hifigan.onnx` (the neural vocoder). The Rust SDK looks for
-`hifigan.onnx` next to the model prefix.
+`hifigan.onnx` next to the model prefix. Rate is a free inference-time knob (no retrain); explicit
+pitch/energy control is planned for v0.2 (FastSpeech-2 variance adaptors).
 
 ## TensorBoard (progress + audio)
 

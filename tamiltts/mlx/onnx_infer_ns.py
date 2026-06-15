@@ -40,6 +40,9 @@ class TamilNSTTS:
         return np.array([[BOS_ID] + [self.vocab[c] for c in text if c in self.vocab] + [EOS_ID]], np.int64)
 
     def synth_mel(self, text, speed=1.0):
+        # speed is a duration multiplier (>1 faster/shorter, <1 slower/longer);
+        # guard non-positive values to avoid div-by-zero -> NaN durations.
+        speed = speed if speed > 0 else 1.0
         tokens = self.encode_text(text)
         enc, log_dur = self.enc.run(None, {"tokens": tokens})
         Tt = tokens.shape[1]
@@ -62,7 +65,8 @@ def main():
     ap.add_argument("-m", "--model", default="models/tamil_ns")
     ap.add_argument("--text", required=True)
     ap.add_argument("-o", "--out", default="ns_onnx_out.wav")
-    ap.add_argument("--speed", type=float, default=1.0)
+    ap.add_argument("--speed", type=float, default=1.0,
+                    help="duration multiplier: >1 faster/shorter, <1 slower/longer")
     args = ap.parse_args()
     tts = TamilNSTTS(args.model)
     wav = tts.synth(args.text, args.speed)
