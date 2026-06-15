@@ -51,6 +51,12 @@ Pipeline: text → enc_dur → (host-side integer length-regulation by predicted
 Python: `uv run python -m tamiltts.mlx.onnx_infer_ns -m models/tamil_ns --text "வணக்கம்" -o out.wav`
 Rust:   `cargo run --release --example synthesize_ns -- "வணக்கம்" out.wav ../models/tamil_ns`
 
+## License
+
+The model is **free to use under the [Apache-2.0 license](https://www.apache.org/licenses/LICENSE-2.0)**.
+Note the upstream attribution that still applies: training data is IndicTTS Tamil (CC-BY-4.0 + IIT
+Madras Indic TTS EULA — attribution required, see `docs/DATASET_LICENSE.md`); vocoder weights are MIT.
+
 ## Provenance
 
 Acoustic model trained in this repo (MLX). Vocoder weights: HiFi-GAN `jaketae/hifigan-lj-v1` (MIT),

@@ -43,6 +43,7 @@ The SDKs run `text → enc_dur → (length-regulate) → decoder → mel → hif
 
 ## Model & licenses
 
+- **The model is free to use under the [Apache-2.0 license](https://www.apache.org/licenses/LICENSE-2.0).**
 - Trained ~20k steps in MLX on a 32 GB Mac. Single-speaker female Tamil voice; not a speaker cloner.
 - **Training data:** [IndicTTS Tamil] — CC-BY-4.0 + IIT Madras Indic TTS EULA, attribution required
   (see [`docs/DATASET_LICENSE.md`](docs/DATASET_LICENSE.md)).
