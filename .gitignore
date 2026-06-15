@@ -17,7 +17,11 @@ data/*.parquet
 data/metadata*.csv
 runs/
 runs_smoke/
+runs_mlx*/
 data_smoke/
+data/mlx*/
+*.log
+models/*.bin
 output/
 checkpoints/
 *.pth
@@ -30,6 +34,9 @@ models/*.json
 
 # Rust
 rust/target/
+
+# Working notes (local)
+todo.md
 
 # OS / editor
 .DS_Store

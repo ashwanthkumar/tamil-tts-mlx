@@ -8,6 +8,8 @@
 //! ```
 
 mod phonemize;
+pub mod mlx_tts;
+pub mod mlx_ns_tts;
 
 use std::path::{Path, PathBuf};
 
