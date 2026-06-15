@@ -1,6 +1,7 @@
 """Inference for the non-AR FastTTS (single forward pass, no AR loop).
 
-encode text -> predict durations -> length-regulate -> non-causal decode -> mel -> Griffin-Lim.
+encode text -> predict durations -> length-regulate -> non-causal decode -> mel -> HiFi-GAN
+(falls back to Griffin-Lim if models/hifigan.onnx is absent).
 
     uv run python -m tamiltts.mlx.infer_ns --run runs_mlx_ns/tamil_ns --text "வணக்கம்" -o out.wav
 """
@@ -19,6 +20,28 @@ from .dataset import TTSData
 from .model import key_pad_mask
 from .model_ns import NSConfig, FastTTS, gather_expand
 from .normalize import normalize
+
+# HiFi-GAN ONNX vocoder (natural audio); falls back to Griffin-Lim if absent. Loaded once.
+_VOC = "unset"
+
+
+def _vocoder(path: str = "models/hifigan.onnx"):
+    global _VOC
+    if _VOC == "unset":
+        try:
+            import onnxruntime as ort
+            _VOC = ort.InferenceSession(path, providers=["CPUExecutionProvider"]) if Path(path).exists() else None
+        except Exception:
+            _VOC = None
+    return _VOC
+
+
+def vocode(logmel: np.ndarray) -> np.ndarray:
+    """Denormalized (T, 80) log-mel -> waveform via HiFi-GAN ONNX, else Griffin-Lim."""
+    voc = _vocoder()
+    if voc is not None:
+        return voc.run(None, {"mel": logmel.T[None].astype(np.float32)})[0][0, 0]
+    return mel_to_wav(logmel)
 
 
 def load_model(run_dir: Path) -> FastTTS:
@@ -52,7 +75,7 @@ def generate(model, data: TTSData, text: str, speed: float = 1.0, max_total: int
     _, mel_post = model.decode(expanded, dec_mask)
     mx.eval(mel_post)
     mel = np.array(mel_post[0]) * data.mel_std + data.mel_mean
-    return mel_to_wav(mel)
+    return vocode(mel)
 
 
 def main():
