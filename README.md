@@ -11,11 +11,9 @@ No GPU needed at inference; runs on any platform.
 
 ## 🔊 Demo
 
-https://github.com/ashwanthkumar/tamil-tts-mlx/raw/main/videos/intro.mp4
+[![Tamil TTS demo — click to play](videos/poster.png)](videos/intro.mp4)
 
-A short intro with sample Tamil sentences (on-screen text + synthesized voice). The clip is built
-with Remotion — source in [`videos/intro/`](videos/intro/). Individual samples:
-[demo1.mp4](samples/demo1.mp4) · [demo2.mp4](samples/demo2.mp4).
+▶ [Play intro](videos/intro.mp4) (Tamil text + synthesized voice). Samples: [demo1](samples/demo1.mp4) · [demo2](samples/demo2.mp4).
 
 ## Quick start
 
