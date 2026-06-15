@@ -121,15 +121,12 @@ def main():
                       opset_version=args.opset)
     print(f"exported {dec_path}")
 
-    # tokenizer + stats + mel_inv (reuse the AR exporter's payload format)
-    from .audio import _mel_basis
-    mel_inv = np.linalg.pinv(_mel_basis).astype(np.float32)
+    # tokenizer + mel stats for the SDKs (vocab, normalization, audio params)
     stats = json.loads((args.data / "stats.json").read_text())
     payload = {
         "vocab": json.loads((args.data / "vocab.json").read_text(encoding="utf-8")),
         "mel_mean": stats["mel_mean"], "mel_std": stats["mel_std"],
         "audio": {"sr": 22050, "n_fft": 1024, "hop": 256, "win": 1024, "n_mels": cfg["n_mels"], "fmin": 0, "fmax": 8000},
-        "mel_inv": mel_inv.tolist(),
     }
     tok_out = str(args.out) + ".tokenizer.json"
     Path(tok_out).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")

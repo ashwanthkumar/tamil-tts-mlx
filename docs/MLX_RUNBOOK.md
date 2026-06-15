@@ -71,8 +71,8 @@ uv run python -m tamiltts.mlx.onnx_infer_ns -m models/tamil_ns --text "வணக
 cd rust && cargo run --release --example synthesize_ns -- "வணக்கம்" out.wav ../models/tamil_ns
 ```
 
-`onnx_infer_ns` uses `models/hifigan.onnx` automatically when present (Griffin-Lim fallback if not).
-The Rust SDK looks for `hifigan.onnx` next to the model prefix.
+`onnx_infer_ns` requires `models/hifigan.onnx` (the neural vocoder). The Rust SDK looks for
+`hifigan.onnx` next to the model prefix.
 
 ## TensorBoard (progress + audio)
 

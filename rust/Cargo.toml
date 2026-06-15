@@ -2,7 +2,7 @@
 name = "tamil-tts"
 version = "0.1.0"
 edition = "2021"
-description = "Rust SDK for tamil-tts: ONNX VITS Tamil speech synthesis on CPU"
+description = "Rust SDK for tamil-tts: non-AR ONNX Tamil speech synthesis on CPU"
 license = "MIT"
 repository = "https://github.com/ashwanthkumar/tamil-tts"
 
@@ -16,16 +16,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 hound = "3"
 anyhow = "1"
-rustfft = "6"
 regex = "1"
-
-[[example]]
-name = "synthesize"
-path = "examples/synthesize.rs"
-
-[[example]]
-name = "synthesize_mlx"
-path = "examples/synthesize_mlx.rs"
 
 [[example]]
 name = "synthesize_ns"

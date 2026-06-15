@@ -1,7 +1,7 @@
 """Inference for the non-AR FastTTS (single forward pass, no AR loop).
 
 encode text -> predict durations -> length-regulate -> non-causal decode -> mel -> HiFi-GAN
-(falls back to Griffin-Lim if models/hifigan.onnx is absent).
+(the HiFi-GAN ONNX vocoder is required; see `tamiltts.mlx.export_hifigan`).
 
     uv run python -m tamiltts.mlx.infer_ns --run runs_mlx_ns/tamil_ns --text "வணக்கம்" -o out.wav
 """

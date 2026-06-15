@@ -2,7 +2,7 @@
 
     uv run python -m tamiltts.mlx.onnx_infer_ns -m models/tamil_ns --text "வணக்கம்" -o out.wav
 
-Pipeline: enc_dur.onnx -> durations -> integer length-regulate (host) -> decoder.onnx -> Griffin-Lim.
+Pipeline: enc_dur.onnx -> durations -> integer length-regulate (host) -> decoder.onnx -> HiFi-GAN.
 """
 from __future__ import annotations
 

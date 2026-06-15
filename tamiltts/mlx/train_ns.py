@@ -1,6 +1,6 @@
 """Train the non-autoregressive FastTTS on Tamil data (MLX, Apple GPU).
 
-Requires extracted durations (tamiltts.mlx.extract_durations). No AR loop -> no collapse.
+Requires per-utterance durations from the forced aligner (tamiltts.mlx.aligner). No AR loop -> no collapse.
 
     uv run python -m tamiltts.mlx.train_ns --data data/mlx --out runs_mlx_ns --steps 80000
 """

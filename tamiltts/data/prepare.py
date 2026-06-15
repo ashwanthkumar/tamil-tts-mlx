@@ -1,8 +1,9 @@
-"""Prepare the IndicTTS Tamil corpus for VITS training.
+"""Prepare the IndicTTS Tamil corpus for training.
 
 Downloads ``SPRINGLab/IndicTTS_Tamil`` (parquet, on the Hugging Face Hub), keeps a single
 speaker (default: female), resamples every clip to 22.05 kHz mono, writes the wavs and an
-LJSpeech-style ``metadata.csv`` (``id|text|text``) plus a train/val split that Coqui-TTS reads.
+LJSpeech-style ``metadata.csv`` (``id|text|text``) plus a train/val split that
+``tamiltts.mlx.preprocess`` reads.
 
 Usage:
     uv run python -m tamiltts.data.prepare --speaker female --out data

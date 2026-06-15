@@ -4,8 +4,9 @@ Small, **CPU-friendly Tamil text-to-speech** — a single-speaker (female) voice
 **Apple Silicon with [MLX]**, exported to **ONNX**, with **Python** and **Rust** inference SDKs.
 No GPU needed at inference; runs on any platform.
 
-- **Acoustic model:** non-autoregressive, FastSpeech-style transformer (char-level Tamil → mel),
-  trained from scratch in MLX on the Apple GPU.
+- **Acoustic model:** non-autoregressive, FastSpeech-2-style transformer (char-level Tamil → mel),
+  trained from scratch in MLX on the Apple GPU. ~7.9M params; duration-predictor only (no
+  pitch/energy variance adaptor), single fixed speaker, no style/emotion conditioning.
 - **Vocoder:** HiFi-GAN (mel → waveform) — natural, non-robotic audio.
 - **~33 MB** acoustic model + 56 MB vocoder, 22.05 kHz.
 

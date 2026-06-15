@@ -1,12 +1,12 @@
 [project]
 name = "tamil-tts"
 version = "0.1.0"
-description = "Small, fast, CPU-friendly Tamil text-to-speech (VITS -> ONNX), trained on the IndicTTS Tamil corpus."
+description = "Small, fast, CPU-friendly Tamil text-to-speech (MLX -> ONNX), trained on the IndicTTS Tamil corpus."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
-license = { text = "MIT" }
+license = { text = "Apache-2.0" }
 authors = [{ name = "Ashwanth Kumar", email = "ashwanth.kumar@gmail.com" }]
-keywords = ["tts", "tamil", "vits", "onnx", "speech-synthesis"]
+keywords = ["tts", "tamil", "mlx", "onnx", "speech-synthesis"]
 
 # Lightweight runtime deps: enough to RUN inference from the ONNX model.
 dependencies = [
@@ -16,24 +16,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Heavy deps needed only for data prep + TRAINING (use the M1 Studio for this).
+# Deps for data prep + TRAINING + ONNX export on an Apple-Silicon (MLX) Mac.
 train = [
-    "coqui-tts>=0.25.1",
-    # torch >=2.9 forces the torchcodec dependency (needs specific FFmpeg); stay below it
-    # so coqui-tts uses the torchaudio IO path.
-    "torch>=2.6,<2.9",
-    "torchaudio>=2.6,<2.9",
-    # coqui-tts's XTTS/tortoise code imports symbols removed in transformers 5.x
-    "transformers>=4.40,<5",
-    "datasets>=2.18",
-    "librosa>=0.10",
-    "tqdm>=4.66",
-    "pandas>=2.0",
-    "onnx>=1.16",
+    "mlx>=0.18",            # acoustic model training on the Apple GPU
+    "torch>=2.6,<2.9",      # CTC forced-aligner (CPU) + torch.onnx / HiFi-GAN export
+    "onnx>=1.16",           # torch.onnx export
+    "librosa>=0.10",        # mel front-end / preprocessing
+    "tensorboard",          # training + eval logging
 ]
-
-[project.scripts]
-tamil-tts = "tamiltts.sdk.cli:main"
 
 [build-system]
 requires = ["hatchling"]
