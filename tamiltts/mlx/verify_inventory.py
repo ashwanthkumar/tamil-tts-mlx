@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 
 import numpy as np
@@ -29,29 +30,50 @@ def norm(w):
     return w * (0.95 / p) if p > 1e-6 else w
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--run", type=Path, default=Path("runs_mlx_ns/tamil_ns2"))
-    ap.add_argument("--data", type=Path, default=Path("data/mlx"))
-    args = ap.parse_args()
-    from torch.utils.tensorboard import SummaryWriter
+def _latest_step(run: Path) -> int:
+    sf = run / "latest_state.json"
+    return int(json.loads(sf.read_text()).get("step", 0)) if sf.exists() else 0
 
-    data = TTSData(args.data)
-    model = load_model(args.run)
-    step = 0
-    sf = args.run / "latest_state.json"
-    if sf.exists():
-        step = int(json.loads(sf.read_text()).get("step", 0))
-    writer = SummaryWriter(str(args.run / "verify"))
-    print(f"[verify] model step {step}; logging consonant inventory + vowel grid to {args.run/'verify'}", flush=True)
 
+def _log_inventory(writer, data, model, step):
     for c in CONS:
         writer.add_audio(f"consonant/{c}", norm(generate(model, data, c)), step, sample_rate=SR)
         row = " ".join(c + v for v in VSIGN)
         writer.add_audio(f"row/{c}", norm(generate(model, data, row)), step, sample_rate=SR)
         writer.add_text(f"text/row_{c}", row, step)
     writer.flush()
-    print(f"[verify] done: {len(CONS)} consonants + {len(CONS)} vowel-rows at step {step}", flush=True)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run", type=Path, default=Path("runs_mlx_ns/tamil_ns2"))
+    ap.add_argument("--data", type=Path, default=Path("data/mlx"))
+    ap.add_argument("--watch", action="store_true", help="poll the latest checkpoint and refresh each time it advances")
+    ap.add_argument("--interval", type=int, default=120)
+    args = ap.parse_args()
+    from torch.utils.tensorboard import SummaryWriter
+
+    data = TTSData(args.data)
+    writer = SummaryWriter(str(args.run / "verify"))
+
+    if not args.watch:
+        step = _latest_step(args.run)
+        _log_inventory(writer, data, load_model(args.run), step)
+        print(f"[verify] logged {len(CONS)} consonants + {len(CONS)} vowel-rows at step {step}", flush=True)
+        return
+
+    print(f"[verify] watching {args.run} (refresh every checkpoint) -> {args.run/'verify'}", flush=True)
+    last = -1
+    while True:
+        step = _latest_step(args.run)
+        if step != last:
+            try:
+                _log_inventory(writer, data, load_model(args.run), step)
+                print(f"[verify] logged inventory at step {step}", flush=True)
+                last = step
+            except Exception as e:
+                print(f"[verify] skip step {step}: {e}", flush=True)
+        time.sleep(args.interval)
 
 
 if __name__ == "__main__":
