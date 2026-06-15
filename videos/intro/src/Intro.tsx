@@ -31,11 +31,13 @@ const Segment: React.FC<{seg: Seg; index: number}> = ({seg, index}) => {
     <Sequence from={seg.start} durationInFrames={seg.dur + 16}>
       <Audio src={staticFile(seg.file)} />
       <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center', padding: 96}}>
-        <FadeUp at={3}>
-          <div style={{fontFamily: SANS, fontSize: 21, color: ACCENT, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 26}}>
-            {intro ? 'Introduction' : `Voice sample ${index - N_INTRO + 1}`}
-          </div>
-        </FadeUp>
+        {!intro && (
+          <FadeUp at={3}>
+            <div style={{fontFamily: SANS, fontSize: 21, color: ACCENT, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 26}}>
+              {`Voice sample ${index - N_INTRO + 1}`}
+            </div>
+          </FadeUp>
+        )}
         <FadeUp at={6}>
           <div style={{fontFamily: tamilFont, fontSize: 62, color: 'white', textAlign: 'center', lineHeight: 1.32, maxWidth: 1060, textWrap: 'balance'}}>
             {seg.tamil}
