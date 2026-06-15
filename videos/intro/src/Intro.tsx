@@ -87,6 +87,25 @@ export const Intro: React.FC = () => {
       {(script.segments as Seg[]).map((seg, i) => (
         <Segment key={i} seg={seg} index={i} />
       ))}
+
+      {/* closing acknowledgment / thank-you */}
+      <Sequence from={(script as {ack_start: number}).ack_start}>
+        <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center', padding: 100}}>
+          <FadeUp at={4}>
+            <div style={{fontFamily: tamilFont, fontSize: 100, color: 'white', fontWeight: 700}}>நன்றி</div>
+          </FadeUp>
+          <FadeUp at={14}>
+            <div style={{fontFamily: SANS, fontSize: 31, color: '#cdd9e6', marginTop: 26, textAlign: 'center', maxWidth: 1040, lineHeight: 1.45}}>
+              Built with the <b style={{color: 'white'}}>IndicTTS Tamil</b> corpus.
+            </div>
+          </FadeUp>
+          <FadeUp at={26}>
+            <div style={{fontFamily: SANS, fontSize: 27, color: '#9fb3c8', marginTop: 18, textAlign: 'center', maxWidth: 1040, lineHeight: 1.45}}>
+              With gratitude to the <b style={{color: ACCENT}}>IIT&nbsp;Madras</b> Indic&nbsp;TTS team for sharing the dataset.
+            </div>
+          </FadeUp>
+        </AbsoluteFill>
+      </Sequence>
     </AbsoluteFill>
   );
 };

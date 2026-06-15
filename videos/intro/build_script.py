@@ -36,7 +36,7 @@ SEGMENTS = [
 
 INTRO = 80          # title frames before first clip
 GAP = 16            # frames between clips
-TAIL = 50           # outro frames after last clip
+ACK = 180           # frames for the closing acknowledgment / thank-you slide (~6s)
 
 
 def gen(text: str, out: Path):
@@ -57,8 +57,10 @@ def main():
         segs.append({"file": f.name, "tamil": ta, "en": en, "start": cursor, "dur": df})
         print(f"seg{i:02d}: {dur:.2f}s -> {df}f  start={cursor}  | {en}")
         cursor += df + GAP
-    total = cursor + TAIL
-    script = {"fps": FPS, "width": 1280, "height": 720, "intro": INTRO, "total": total, "segments": segs}
+    ack_start = cursor
+    total = ack_start + ACK
+    script = {"fps": FPS, "width": 1280, "height": 720, "intro": INTRO,
+              "ack_start": ack_start, "total": total, "segments": segs}
     (SRC / "script.json").write_text(json.dumps(script, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"total {total} frames = {total/FPS:.1f}s -> wrote src/script.json")
 
