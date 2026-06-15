@@ -1,8 +1,9 @@
 # Model card: tamil-tts (female, non-AR FastTTS + HiFi-GAN)
 
 - **Task:** Tamil text-to-speech (single-speaker, female)
-- **Acoustic model:** non-autoregressive FastSpeech-style transformer (char-level Tamil → 80-dim
-  log-mel), trained from scratch in **MLX on Apple Silicon**. ~7.9M params.
+- **Acoustic model:** non-autoregressive FastSpeech-2-style transformer (char-level Tamil → 80-dim
+  log-mel), trained from scratch in **MLX on Apple Silicon**. ~7.9M params; duration-predictor only
+  (no pitch/energy variance adaptor), single fixed speaker, no style/emotion conditioning.
 - **Vocoder:** HiFi-GAN V1 (mel → waveform), pretrained on LJSpeech (MIT; matches our 22.05 kHz /
   hop 256 / 80-mel front-end). Replaces Griffin-Lim for natural (non-robotic) audio.
 - **Sample rate:** 22.05 kHz mono
