@@ -1,93 +1,55 @@
-# tamil-tts
+# tamil-tts (MLX)
 
-Small, fast, **CPU-friendly Tamil text-to-speech**. A single-speaker (female) [VITS]
-model trained on the [IndicTTS Tamil] corpus and exported to **ONNX** for fast inference,
-with both a **Python** and a **Rust** SDK.
+Small, **CPU-friendly Tamil text-to-speech** — a single-speaker (female) voice trained on
+**Apple Silicon with [MLX]**, exported to **ONNX**, with **Python** and **Rust** inference SDKs.
+No GPU needed at inference; runs on any platform.
 
-Design goals: tiny model (~15–30 MB), real-time-or-faster on CPU, no GPU needed at inference.
+- **Acoustic model:** non-autoregressive, FastSpeech-style transformer (char-level Tamil → mel),
+  trained from scratch in MLX on the Apple GPU.
+- **Vocoder:** HiFi-GAN (mel → waveform) — natural, non-robotic audio.
+- **~33 MB** acoustic model + 56 MB vocoder, 22.05 kHz.
 
-> Status: **pipeline validated end-to-end on an M2** — install, a real VITS training step on MPS,
-> ONNX export, and both SDKs were smoke-tested with `tests/make_synthetic_dataset.py`. What
-> remains is the *real* training run to convergence (a long job you drive on the M1 Studio).
+## 🔊 Demo
 
-[VITS]: https://arxiv.org/abs/2106.06103
+https://github.com/ashwanthkumar/tamil-tts-mlx/raw/main/videos/intro.mp4
+
+A short intro with sample Tamil sentences (on-screen text + synthesized voice). The clip is built
+with Remotion — source in [`videos/intro/`](videos/intro/). Individual samples:
+[demo1.mp4](samples/demo1.mp4) · [demo2.mp4](samples/demo2.mp4).
+
+## Quick start
+
+Download the model assets from the [latest release](https://github.com/ashwanthkumar/tamil-tts-mlx/releases/latest)
+into `models/` (`tamil_ns.enc_dur.onnx`, `tamil_ns.decoder.onnx`, `hifigan.onnx`, `tamil_ns.tokenizer.json`), then:
+
+**Python**
+```bash
+uv sync --extra train          # or: pip install onnxruntime numpy soundfile librosa
+uv run python -m tamiltts.mlx.onnx_infer_ns -m models/tamil_ns --text "வணக்கம், இது தமிழ் பேச்சு." -o out.wav
+```
+
+**Rust**
+```bash
+cd rust
+cargo run --release --example synthesize_ns -- "வணக்கம்" out.wav ../models/tamil_ns
+```
+
+The SDKs run `text → enc_dur → (length-regulate) → decoder → mel → hifigan → wav`, entirely on CPU.
+(Griffin-Lim is a built-in fallback if `hifigan.onnx` is absent.)
+
+## How it works / reproduce it
+
+- **Architecture + step-by-step reproduction on any MLX Mac** (data → aligner → train → ONNX →
+  vocoder → SDKs), plus TensorBoard/remote setup: [`docs/MLX_RUNBOOK.md`](docs/MLX_RUNBOOK.md).
+- **Model card:** [`docs/model_card.md`](docs/model_card.md).
+
+## Model & licenses
+
+- Trained ~20k steps in MLX on a 32 GB Mac. Single-speaker female Tamil voice; not a speaker cloner.
+- **Training data:** [IndicTTS Tamil] — CC-BY-4.0 + IIT Madras Indic TTS EULA, attribution required
+  (see [`docs/DATASET_LICENSE.md`](docs/DATASET_LICENSE.md)).
+- **Vocoder weights:** HiFi-GAN [`jaketae/hifigan-lj-v1`](https://huggingface.co/jaketae/hifigan-lj-v1) (MIT).
+- Code: MIT (see `LICENSE`).
+
+[MLX]: https://github.com/ml-explore/mlx
 [IndicTTS Tamil]: https://huggingface.co/datasets/SPRINGLab/IndicTTS_Tamil
-
-## Why this stack
-
-| Requirement            | Choice                                   |
-| ---------------------- | ---------------------------------------- |
-| Small + fast on CPU    | VITS (single-speaker) → ONNX             |
-| Tamil phonemization    | `espeak-ng` (`ta`)                       |
-| Train on Apple Silicon | PyTorch **MPS** (M2 GPU / M1 Studio GPU) |
-| Easy, fast inference   | `onnxruntime` (Python) + `ort` (Rust)    |
-
-**On MLX:** PyTorch has no MLX backend — Metal GPU acceleration on Apple Silicon comes from the
-**MPS** backend, which is what we use. MLX would forfeit clean ONNX export and a stable Rust SDK,
-so it's documented as an optional future track only (`docs/mlx.md`), not the default.
-
-## Hardware plan
-
-- **Training:** Mac Studio (M1 Max/Ultra, 32 GB) via MPS — faster GPU, bigger batches.
-- **Inference:** MacBook Air M2 (or any CPU) via ONNX — the model is portable.
-
-## Layout
-
-```
-tamiltts/            Python package
-  data/prepare.py    IndicTTS Tamil (parquet) -> 22.05kHz wavs + metadata (female speaker)
-  phonemize.py       Tamil text -> espeak-ng phoneme ids
-  train.py           VITS training wrapper (Coqui-TTS, MPS-aware)
-  export_onnx.py     trained checkpoint -> models/tamil_female.onnx
-  sdk/               onnxruntime inference SDK + CLI
-configs/             training + model config
-rust/                Rust SDK crate (ort + onnxruntime)
-scripts/             01_prepare_data.sh, 02_train.sh, 03_export.sh
-docs/                dataset license/attribution, model card, MLX notes
-```
-
-## Quickstart
-
-### 0. Environment
-
-```bash
-uv sync --extra train          # full env for data prep + training (use on the Studio)
-# or, inference-only (on the Air):
-uv sync
-brew install espeak-ng         # required for Tamil phonemization
-```
-
-### 1. Prepare data
-
-```bash
-uv run python -m tamiltts.data.prepare --speaker female --out data
-```
-
-### 2. Train (on the M1 Studio)
-
-```bash
-uv run python -m tamiltts.train --config configs/tamil_female_vits.json
-```
-
-### 3. Export to ONNX
-
-```bash
-uv run python -m tamiltts.export_onnx --run runs/tamil_female --out models/tamil_female.onnx
-```
-
-### 4. Synthesize
-
-Python:
-```bash
-uv run tamil-tts "வணக்கம், இது தமிழ் பேச்சு தொகுப்பு." -o hello.wav
-```
-
-Rust:
-```bash
-cd rust && cargo run --release --example synthesize -- "வணக்கம்" hello.wav
-```
-
-## License
-
-Code: MIT (`LICENSE`). Data & trained model: CC-BY-4.0 + IIT Madras Indic TTS EULA —
-see [`docs/DATASET_LICENSE.md`](docs/DATASET_LICENSE.md). Attribution is required.

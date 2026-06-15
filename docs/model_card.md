@@ -54,4 +54,4 @@ Rust:   `cargo run --release --example synthesize_ns -- "வணக்கம்" 
 ## Provenance
 
 Acoustic model trained in this repo (MLX). Vocoder weights: HiFi-GAN `jaketae/hifigan-lj-v1` (MIT),
-re-exported to ONNX. See `docs/MLX_TTS_LEARNINGS.md` for the full build history and design rationale.
+re-exported to ONNX. Reproduction steps: `docs/MLX_RUNBOOK.md`.

@@ -1,0 +1,15 @@
+{
+  "name": "tamil-tts-intro",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "render": "remotion render src/index.ts Intro out/intro.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.347",
+    "@remotion/google-fonts": "4.0.347",
+    "remotion": "4.0.347",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  }
+}

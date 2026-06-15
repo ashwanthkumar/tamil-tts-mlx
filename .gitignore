@@ -35,6 +35,10 @@ models/*.json
 # Rust
 rust/target/
 
+# Remotion (video tooling) — keep source, ignore deps/build
+node_modules/
+videos/intro/out/
+
 # Working notes (local)
 todo.md
 
