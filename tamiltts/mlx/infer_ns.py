@@ -57,7 +57,8 @@ def predict_durations(model, enc, speed: float = 1.0) -> np.ndarray:
     return dur
 
 
-def generate(model, data: TTSData, text: str, speed: float = 1.0, max_total: int = 4000):
+def generate(model, data: TTSData, text: str, speed: float = 1.0, max_total: int = 4000,
+             pitch_scale: float = 1.0, energy_scale: float = 1.0):
     tok_ids = data.encode_text(normalize(text))
     tok = mx.array([tok_ids], dtype=mx.int32)
     Tt = tok.shape[1]
@@ -66,10 +67,15 @@ def generate(model, data: TTSData, text: str, speed: float = 1.0, max_total: int
     dur = predict_durations(model, enc, speed)
     if dur.sum() == 0:
         dur[:] = 1
+    # variance adaptors: add predicted pitch/energy embeddings before length regulation.
+    # pass the corpus mean/std so the scale knobs act in real Hz space (intuitive: 1.3 = +30%).
+    cond, _, _ = model.variance(enc, p_scale=pitch_scale, e_scale=energy_scale,
+                                p_mean=data.pitch_mean, p_std=data.pitch_std,
+                                e_mean=data.energy_mean, e_std=data.energy_std)
     expand = np.repeat(np.arange(Tt, dtype=np.int32), dur)[None, :max_total]
     Tm = expand.shape[1]
     dec_mask = key_pad_mask(mx.array([Tm]), Tm)
-    expanded = gather_expand(enc, mx.array(expand))
+    expanded = gather_expand(cond, mx.array(expand))
     _, mel_post = model.decode(expanded, dec_mask)
     mx.eval(mel_post)
     mel = np.array(mel_post[0]) * data.mel_std + data.mel_mean
@@ -83,10 +89,13 @@ def main():
     ap.add_argument("--text", required=True)
     ap.add_argument("-o", "--out", type=Path, default=Path("ns_out.wav"))
     ap.add_argument("--speed", type=float, default=1.0)
+    ap.add_argument("--pitch", type=float, default=1.0, help="pitch scale (>1 higher, <1 lower)")
+    ap.add_argument("--energy", type=float, default=1.0, help="energy scale (>1 louder/stronger)")
     args = ap.parse_args()
     data = TTSData(args.data)
     model = load_model(args.run)
-    wav = generate(model, data, args.text, args.speed)
+    wav = generate(model, data, args.text, args.speed,
+                   pitch_scale=args.pitch, energy_scale=args.energy)
     sf.write(str(args.out), wav, SR)
     print(f"wrote {args.out} ({len(wav)/SR:.2f}s)")
 

@@ -39,7 +39,7 @@ def teacher_forced(model, data, item):
     tok = mx.array(b["tok"]); expand = mx.array(b["expand_idx"])
     Tt, Tm = tok.shape[1], expand.shape[1]
     src = key_pad_mask(mx.array(b["tlen"]), Tt); dec = key_pad_mask(mx.array(b["mlen"]), Tm)
-    _, mel_post, _ = model(tok, src, expand, dec)
+    mel_post = model(tok, src, expand, dec)[1]
     n = int(b["mlen"][0])
     return np.array(mel_post[0])[:n], b["mel"][0][:n]
 

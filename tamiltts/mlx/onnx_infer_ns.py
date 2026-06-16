@@ -39,12 +39,17 @@ class TamilNSTTS:
         text = normalize(text)   # verbalize acronyms/symbols/digits before char tokenization
         return np.array([[BOS_ID] + [self.vocab[c] for c in text if c in self.vocab] + [EOS_ID]], np.int64)
 
-    def synth_mel(self, text, speed=1.0):
+    def synth_mel(self, text, speed=1.0, pitch=1.0, energy=1.0):
         # speed is a duration multiplier (>1 faster/shorter, <1 slower/longer);
         # guard non-positive values to avoid div-by-zero -> NaN durations.
         speed = speed if speed > 0 else 1.0
         tokens = self.encode_text(text)
-        enc, log_dur = self.enc.run(None, {"tokens": tokens})
+        # pitch/energy scale the variance adaptors inside enc_dur (real space, 1.0 = natural)
+        enc, log_dur = self.enc.run(None, {
+            "tokens": tokens,
+            "pitch_scale": np.array([pitch], np.float32),
+            "energy_scale": np.array([energy], np.float32),
+        })
         Tt = tokens.shape[1]
         dur = np.maximum(np.round((np.exp(log_dur[0]) - 1.0) / speed), 0).astype(np.int64)
         if dur.sum() == 0:
@@ -53,8 +58,8 @@ class TamilNSTTS:
         mel = self.dec.run(None, {"enc": enc, "expand_idx": expand})[0][0]
         return mel * self.mel_std + self.mel_mean
 
-    def synth(self, text, speed=1.0):
-        logmel = self.synth_mel(text, speed)               # (T, n_mels) denormalized log-mel
+    def synth(self, text, speed=1.0, pitch=1.0, energy=1.0):
+        logmel = self.synth_mel(text, speed, pitch, energy)   # (T, n_mels) denormalized log-mel
         wav = self.voc.run(None, {"mel": logmel.T[None].astype(np.float32)})[0][0, 0]  # HiFi-GAN
         p = np.abs(wav).max()
         return wav * (0.95 / p) if p > 1e-6 else wav
@@ -67,9 +72,13 @@ def main():
     ap.add_argument("-o", "--out", default="ns_onnx_out.wav")
     ap.add_argument("--speed", type=float, default=1.0,
                     help="duration multiplier: >1 faster/shorter, <1 slower/longer")
+    ap.add_argument("--pitch", type=float, default=1.0,
+                    help="pitch scale: >1 higher, <1 lower (usable ~0.8-1.2)")
+    ap.add_argument("--energy", type=float, default=1.0,
+                    help="energy scale: >1 stronger/louder, <1 softer")
     args = ap.parse_args()
     tts = TamilNSTTS(args.model)
-    wav = tts.synth(args.text, args.speed)
+    wav = tts.synth(args.text, args.speed, args.pitch, args.energy)
     sf.write(args.out, wav, tts.a["sr"])
     print(f"wrote {args.out} ({len(wav)/tts.a['sr']:.2f}s)")
 

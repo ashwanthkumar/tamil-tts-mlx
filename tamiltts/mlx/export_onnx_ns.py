@@ -1,13 +1,18 @@
 """Export the non-AR FastTTS (MLX) to portable ONNX — single forward, no AR loop.
 
 Two graphs (length regulation is integer repeat, done host-side between them):
-  enc_dur.onnx : tokens[1,Tt] int64 -> enc[1,Tt,d] float32, log_dur[1,Tt] float32
+  enc_dur.onnx : tokens[1,Tt] int64, pitch_scale[1], energy_scale[1]
+                 -> enc[1,Tt,d] float32 (pitch/energy-conditioned), log_dur[1,Tt] float32
   decoder.onnx : enc[1,Tt,d], expand_idx[1,Tm] int64 -> mel_post[1,Tm,80]
-SDK: run enc_dur -> dur=round(exp(log_dur)-1) -> expand_idx=repeat(arange(Tt),dur) -> decoder -> Griffin-Lim.
+SDK: run enc_dur -> dur=round(exp(log_dur)-1) -> expand_idx=repeat(arange(Tt),dur) -> decoder -> HiFi-GAN.
+
+The variance adaptors (v0.2) run inside enc_dur: pitch/energy are predicted, scaled in real space by
+the scale inputs (1.0 = natural), embedded, and added to enc before it leaves the graph. The decoder
+graph and host-side length regulation are unchanged from v0.1.
 
 PyTorch twin mirrors model_ns.py exactly; weights ported 1:1 from MLX safetensors.
 
-    uv run python -m tamiltts.mlx.export_onnx_ns --run runs_mlx_ns/tamil_ns2 --out models/tamil_ns
+    uv run python -m tamiltts.mlx.export_onnx_ns --run runs_mlx_ns/tamil_ns_v2 --out models/tamil_ns
 """
 from __future__ import annotations
 
@@ -39,17 +44,26 @@ class DurPred(nn.Module):
 
 
 class TorchFastTTS(nn.Module):
-    def __init__(self, c: dict):
+    def __init__(self, c: dict, var_stats: dict | None = None):
         super().__init__()
         d, h, ff = c["d_model"], c["n_heads"], c["d_ff"]
+        k = c.get("dur_kernel", 3)
         self.n_mels = c["n_mels"]; self.scale = d ** 0.5
         self.embed = nn.Embedding(c["vocab_size"], d)
         self.enc_layers = nn.ModuleList([EncLayer(d, h, ff) for _ in range(c["enc_layers"])])
-        self.dur = DurPred(d, c.get("dur_kernel", 3))
+        self.dur = DurPred(d, k)
+        self.pitch_pred = DurPred(d, k)
+        self.energy_pred = DurPred(d, k)
+        self.pitch_emb = nn.Conv1d(1, d, k, padding=k // 2)
+        self.energy_emb = nn.Conv1d(1, d, k, padding=k // 2)
         self.dec_layers = nn.ModuleList([EncLayer(d, h, ff) for _ in range(c["dec_layers"])])
         self.mel_out = nn.Linear(d, c["n_mels"])
         self.postnet = Postnet(c["n_mels"], c["postnet_dim"], c["postnet_layers"])
         self.register_buffer("pe", sinusoid(c["max_len"], d), persistent=False)
+        # variance normalization constants (baked into the graph so the scale knobs act in real space)
+        vs = var_stats or {"pitch_mean": 0.0, "pitch_std": 1.0, "energy_mean": 0.0, "energy_std": 1.0}
+        for name in ("pitch_mean", "pitch_std", "energy_mean", "energy_std"):
+            self.register_buffer(name, torch.tensor(float(vs[name])), persistent=False)
 
     def encode(self, tokens):
         x = self.embed(tokens) * self.scale + self.pe[: tokens.shape[1]]
@@ -57,9 +71,17 @@ class TorchFastTTS(nn.Module):
             x = l(x, None)
         return x
 
-    def enc_dur(self, tokens):
+    def enc_dur(self, tokens, pitch_scale, energy_scale):
         enc = self.encode(tokens)
-        return enc, self.dur(enc)
+        logdur = self.dur(enc)
+        pitch = self.pitch_pred(enc)              # (B,T) normalized
+        energy = self.energy_pred(enc)
+        # scale in real (denormalized) space: pitch_scale=1.3 -> ~30% higher F0
+        pv = ((pitch * self.pitch_std + self.pitch_mean) * pitch_scale - self.pitch_mean) / self.pitch_std
+        ev = ((energy * self.energy_std + self.energy_mean) * energy_scale - self.energy_mean) / self.energy_std
+        pe = self.pitch_emb(pv.unsqueeze(1)).transpose(1, 2)      # (B,1,T)->(B,d,T)->(B,T,d)
+        ee = self.energy_emb(ev.unsqueeze(1)).transpose(1, 2)
+        return enc + pe + ee, logdur
 
     def decode(self, enc, expand_idx):
         d = enc.shape[2]
@@ -75,7 +97,7 @@ def port(model: TorchFastTTS, w: dict):
     sd = {}
     for k, v in w.items():
         t = torch.from_numpy(np.array(v))
-        if (".convs." in k or k.startswith("dur.c")) and k.endswith(".weight") and t.ndim == 3:
+        if t.ndim == 3 and k.endswith(".weight"):              # every 3D weight here is a Conv1d
             t = t.permute(0, 2, 1).contiguous()                # MLX Conv1d (O,K,I) -> torch (O,I,K)
         sd[k] = t
     missing, unexpected = model.load_state_dict(sd, strict=False)
@@ -91,7 +113,8 @@ def main():
     args = ap.parse_args()
 
     cfg = json.loads((args.run / "config.json").read_text())["cfg"]
-    model = TorchFastTTS(cfg).eval()
+    vstats = json.loads((args.data / "variance_stats.json").read_text())
+    model = TorchFastTTS(cfg, vstats).eval()
     from safetensors.numpy import load_file
     miss, unexp = port(model, load_file(str(args.run / "latest.safetensors")))
     if miss: print("WARN missing:", miss[:6])
@@ -103,12 +126,12 @@ def main():
     d = cfg["d_model"]
 
     tokens = torch.zeros(1, 12, dtype=torch.long)
-    torch.onnx.export(model, (tokens,), enc_path,
-                      input_names=["tokens"], output_names=["enc", "log_dur"],
+    ps = torch.ones(1); es = torch.ones(1)
+    torch.onnx.export(model, (tokens, ps, es), enc_path,
+                      input_names=["tokens", "pitch_scale", "energy_scale"],
+                      output_names=["enc", "log_dur"],
                       dynamic_axes={"tokens": {1: "Tt"}, "enc": {1: "Tt"}, "log_dur": {1: "Tt"}},
-                      opset_version=args.opset,
-                      # export only enc_dur path
-                      )
+                      opset_version=args.opset)
     print(f"exported {enc_path}")
     # decoder graph
     class Dec(nn.Module):
@@ -135,7 +158,7 @@ def main():
 
 # NOTE: model.forward must return the enc_dur outputs for the first export.
 def _patch_forward():
-    TorchFastTTS.forward = lambda self, tokens: self.enc_dur(tokens)
+    TorchFastTTS.forward = lambda self, tokens, ps, es: self.enc_dur(tokens, ps, es)
 
 
 _patch_forward()

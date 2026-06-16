@@ -7,7 +7,7 @@
 //! ```no_run
 //! use tamil_tts::mlx_ns_tts::MlxNsTts;
 //! let mut tts = MlxNsTts::from_prefix("models/tamil_ns")?;
-//! tts.save("வணக்கம்", "hello.wav", 1.0)?;   // 3rd arg = speed: >1 faster, <1 slower
+//! tts.save("வணக்கம்", "hello.wav", 1.0, 1.0, 1.0)?;   // speed, pitch, energy (1.0 = natural)
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
@@ -74,16 +74,22 @@ impl MlxNsTts {
         ids
     }
 
-    /// `speed` is a duration multiplier applied host-side: >1 shortens (faster),
-    /// <1 lengthens (slower). Non-positive values fall back to 1.0 to avoid div-by-zero.
-    pub fn synthesize(&mut self, text: &str, speed: f32) -> Result<Vec<f32>> {
+    /// `speed` is a duration multiplier applied host-side: >1 shortens (faster), <1 lengthens
+    /// (slower). `pitch`/`energy` scale the variance adaptors in real space (1.0 = natural; pitch
+    /// usable ~0.8-1.2). Non-positive values fall back to 1.0.
+    pub fn synthesize(&mut self, text: &str, speed: f32, pitch: f32, energy: f32) -> Result<Vec<f32>> {
         let speed = if speed > 0.0 { speed } else { 1.0 };
+        let pitch = if pitch > 0.0 { pitch } else { 1.0 };
+        let energy = if energy > 0.0 { energy } else { 1.0 };
         let tokens = self.encode(text);
         let tt = tokens.len();
 
-        // enc_dur graph
+        // enc_dur graph: tokens + pitch/energy scale knobs -> (conditioned enc, log_dur)
         let tok_t = Tensor::from_array(([1usize, tt], tokens.clone()))?;
-        let out = self.enc.run(ort::inputs!["tokens" => tok_t])?;
+        let ps_t = Tensor::from_array(([1usize], vec![pitch]))?;
+        let es_t = Tensor::from_array(([1usize], vec![energy]))?;
+        let out = self.enc.run(ort::inputs![
+            "tokens" => tok_t, "pitch_scale" => ps_t, "energy_scale" => es_t])?;
         let (enc_shape, enc_data) = out["enc"].try_extract_tensor::<f32>()?;
         let (_ld_shape, log_dur) = out["log_dur"].try_extract_tensor::<f32>()?;
         let d = enc_shape[2] as usize;
@@ -122,8 +128,8 @@ impl MlxNsTts {
         Ok(wav)
     }
 
-    pub fn save<P: AsRef<Path>>(&mut self, text: &str, out: P, speed: f32) -> Result<()> {
-        let wav = self.synthesize(text, speed)?;
+    pub fn save<P: AsRef<Path>>(&mut self, text: &str, out: P, speed: f32, pitch: f32, energy: f32) -> Result<()> {
+        let wav = self.synthesize(text, speed, pitch, energy)?;
         let spec = hound::WavSpec { channels: 1, sample_rate: self.sample_rate(),
             bits_per_sample: 16, sample_format: hound::SampleFormat::Int };
         let mut w = hound::WavWriter::create(out.as_ref(), spec)?;

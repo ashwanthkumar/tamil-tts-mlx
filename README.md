@@ -5,10 +5,10 @@ Small, **CPU-friendly Tamil text-to-speech** — a single-speaker (female) voice
 No GPU needed at inference; runs on any platform.
 
 - **Acoustic model:** non-autoregressive, FastSpeech-2-style transformer (char-level Tamil → mel),
-  trained from scratch in MLX on the Apple GPU. ~7.9M params; duration-predictor only (no
-  pitch/energy variance adaptor), single fixed speaker, no style/emotion conditioning.
+  trained from scratch in MLX on the Apple GPU. ~8.7M params with duration + pitch + energy variance
+  adaptors (controllable speed/pitch/energy); single fixed speaker, no style/emotion conditioning.
 - **Vocoder:** HiFi-GAN (mel → waveform) — natural, non-robotic audio.
-- **~33 MB** acoustic model + 56 MB vocoder, 22.05 kHz.
+- **~35 MB** acoustic model + 56 MB vocoder, 22.05 kHz.
 
 ## 🔊 Demo
 
@@ -33,9 +33,10 @@ cd rust
 cargo run --release --example synthesize_ns -- "வணக்கம்" out.wav ../models/tamil_ns
 ```
 
-**Speaking rate** — both SDKs take a `speed` multiplier (>1 faster/shorter, <1 slower/longer),
-applied to predicted durations at inference (no retrain): `--speed 0.8` (Python) or a trailing
-`1.25` arg (Rust). Explicit pitch/energy control is planned for v0.2.
+**Prosody control** — both SDKs expose `speed`, `pitch`, and `energy` knobs at inference (1.0 =
+natural): `--speed 0.8 --pitch 1.1 --energy 1.2` (Python), or trailing `speed pitch energy` args
+(Rust). `speed` scales durations host-side; `pitch`/`energy` scale the variance adaptors inside the
+model (pitch usable ~0.8–1.2).
 
 The SDKs run `text → enc_dur → (length-regulate) → decoder → mel → hifigan → wav`, entirely on CPU.
 `hifigan.onnx` (the neural vocoder) is required.

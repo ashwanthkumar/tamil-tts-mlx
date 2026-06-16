@@ -1,7 +1,7 @@
 [project]
 name = "tamil-tts"
-version = "0.1.0"
-description = "Small, fast, CPU-friendly Tamil text-to-speech (MLX -> ONNX), trained on the IndicTTS Tamil corpus."
+version = "0.2.0"
+description = "Small, fast, CPU-friendly Tamil text-to-speech (MLX -> ONNX) with speed/pitch/energy control, trained on the IndicTTS Tamil corpus."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 license = { text = "Apache-2.0" }
@@ -22,6 +22,7 @@ train = [
     "torch>=2.6,<2.9",      # CTC forced-aligner (CPU) + torch.onnx / HiFi-GAN export
     "onnx>=1.16",           # torch.onnx export
     "librosa>=0.10",        # mel front-end / preprocessing
+    "pyworld>=0.3",         # F0 extraction for pitch variance (v0.2)
     "tensorboard",          # training + eval logging
 ]
 

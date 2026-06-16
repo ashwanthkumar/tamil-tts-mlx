@@ -30,17 +30,21 @@ def peak_gb() -> float:
 
 
 DUR_W = 1.0
+PITCH_W = 0.1
+ENERGY_W = 0.1
 
 
 def loss_fn(model, batch):
     tok = mx.array(batch["tok"]); tlen = mx.array(batch["tlen"])
     mlen = mx.array(batch["mlen"]); expand = mx.array(batch["expand_idx"])
     mel_t = mx.array(batch["mel"]); dur_t = mx.array(batch["dur"])
+    pitch_t = mx.array(batch["pitch"]); energy_t = mx.array(batch["energy"])
     Tt, Tm = tok.shape[1], mel_t.shape[1]
 
     src_mask = key_pad_mask(tlen, Tt)
     dec_mask = key_pad_mask(mlen, Tm)
-    mel, mel_post, logdur = model(tok, src_mask, expand, dec_mask)
+    # condition the decoder on ground-truth pitch/energy during training (teacher forcing)
+    mel, mel_post, logdur, pitch_p, energy_p = model(tok, src_mask, expand, dec_mask, pitch_t, energy_t)
 
     fmask = (mx.arange(Tm)[None, :] < mlen[:, None]).astype(mx.float32)[:, :, None]
     denom = mx.maximum(fmask.sum() * mel_t.shape[2], 1.0)
@@ -48,9 +52,12 @@ def loss_fn(model, batch):
     l_post = (mx.abs(mel_post - mel_t) * fmask).sum() / denom
 
     tmask = (mx.arange(Tt)[None, :] < tlen[:, None]).astype(mx.float32)
+    tdenom = mx.maximum(tmask.sum(), 1.0)
     logdur_t = mx.log(dur_t + 1.0)
-    l_dur = (((logdur - logdur_t) ** 2) * tmask).sum() / mx.maximum(tmask.sum(), 1.0)
-    return l_pre + l_post + DUR_W * l_dur
+    l_dur = (((logdur - logdur_t) ** 2) * tmask).sum() / tdenom
+    l_pitch = (((pitch_p - pitch_t) ** 2) * tmask).sum() / tdenom
+    l_energy = (((energy_p - energy_t) ** 2) * tmask).sum() / tdenom
+    return l_pre + l_post + DUR_W * l_dur + PITCH_W * l_pitch + ENERGY_W * l_energy
 
 
 def save_ckpt(model, opt, run_dir: Path, step: int):

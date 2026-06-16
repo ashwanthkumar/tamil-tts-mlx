@@ -21,6 +21,17 @@ class TTSData:
         self.mel_dir = out / "mels"
         self.train = json.loads((out / "train.json").read_text(encoding="utf-8"))
         self.val = json.loads((out / "val.json").read_text(encoding="utf-8"))
+        # variance adaptors (v0.2): per-token pitch/energy + normalization stats (optional)
+        self.pitch_dir = out / "pitch"
+        self.energy_dir = out / "energy"
+        vp = out / "variance_stats.json"
+        if vp.exists():
+            vs = json.loads(vp.read_text())
+            self.pitch_mean, self.pitch_std = vs["pitch_mean"], vs["pitch_std"]
+            self.energy_mean, self.energy_std = vs["energy_mean"], vs["energy_std"]
+        else:
+            self.pitch_mean = self.energy_mean = 0.0
+            self.pitch_std = self.energy_std = 1.0
 
     def encode_text(self, text: str) -> list[int]:
         ids = [BOS_ID]
@@ -41,6 +52,16 @@ class TTSData:
 
     def has_durations(self, uid: str) -> bool:
         return (self.dur_dir / f"{uid}.npy").exists()
+
+    def _load_variance(self, uid: str, kind: str):
+        """Load + z-normalize a per-token pitch/energy vector; None if absent."""
+        d = self.pitch_dir if kind == "pitch" else self.energy_dir
+        f = d / f"{uid}.npy"
+        if not f.exists():
+            return None
+        v = np.load(f).astype(np.float32)
+        mean, std = (self.pitch_mean, self.pitch_std) if kind == "pitch" else (self.energy_mean, self.energy_std)
+        return (v - mean) / std
 
     def batches_ns(self, split: str = "train", batch_size: int = 16, shuffle: bool = True,
                    rng: np.random.Generator | None = None, max_frames: int = 1200):
@@ -72,17 +93,25 @@ class TTSData:
 
         tok = np.zeros((B, Tt), dtype=np.int32)
         dur = np.zeros((B, Tt), dtype=np.float32)
+        pitch = np.zeros((B, Tt), dtype=np.float32)    # per-token, z-normalized (0 = mean)
+        energy = np.zeros((B, Tt), dtype=np.float32)
         expand_idx = np.zeros((B, Tm), dtype=np.int32)
         mel = np.zeros((B, Tm, n_mels), dtype=np.float32)
         for i, (t, d, m) in enumerate(zip(toks, durs, mels)):
             tok[i, : len(t)] = t
             dur[i, : len(d)] = d
+            pv = self._load_variance(group[i]["id"], "pitch")
+            ev = self._load_variance(group[i]["id"], "energy")
+            if pv is not None:
+                pitch[i, : min(len(pv), Tt)] = pv[:Tt]
+            if ev is not None:
+                energy[i, : min(len(ev), Tt)] = ev[:Tt]
             idx = np.repeat(np.arange(len(d), dtype=np.int32), d)  # token idx per mel frame
             n = min(len(idx), m.shape[0], Tm)
             expand_idx[i, :n] = idx[:n]
             mel[i, :n] = m[:n]
             mlen[i] = n
-        return {"tok": tok, "tlen": tlen, "dur": dur,
+        return {"tok": tok, "tlen": tlen, "dur": dur, "pitch": pitch, "energy": energy,
                 "expand_idx": expand_idx, "mel": mel, "mlen": mlen}
 
     def batches(self, split: str = "train", batch_size: int = 16, shuffle: bool = True,

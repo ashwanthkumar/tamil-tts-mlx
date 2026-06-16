@@ -13,12 +13,13 @@ Tamil text
   │  char-level tokenize (<bos> + chars + <eos>)            tamiltts/mlx/dataset.py
   ▼
 ┌──────────────────────────── Acoustic model (MLX, GPU) ───────────────────────────┐
-│ Encoder (transformer)  ──►  Duration predictor ──► per-token durations            │
-│        │                                                                          │
+│ Encoder (transformer)  ──►  Duration / pitch / energy predictors                  │
+│        │           pitch+energy embeddings added to encoder states (controllable) │
 │        ▼   Length Regulator: repeat each token's encoder state by its duration    │
 │ Non-causal decoder (transformer) ──► mel (80-dim log-mel)  + Postnet              │
 └───────────────────────────────────────────────────────────────────────────────────┘
-  │  model_ns.py (FastTTS). Per-token durations for training come from a forward-sum aligner.
+  │  model_ns.py (FastTTS). Training targets: durations from a forward-sum aligner; per-token
+  │  pitch (F0) + energy from extract_variance.py. Inference exposes speed/pitch/energy knobs.
   ▼
 mel ──► HiFi-GAN V1 vocoder ──► waveform (22.05 kHz)        hifigan.py / hifigan.onnx
 ```
@@ -53,6 +54,9 @@ uv run python -m tamiltts.mlx.preprocess --data data --out data/mlx     # -> dat
 uv run python -m tamiltts.mlx.aligner --data data/mlx --steps 2000
 #    durations should be well-distributed (mean ~6-8 frames/token).
 
+# 2b. variance targets: per-token pitch (F0) + energy -> data/mlx/{pitch,energy}/*.npy + variance_stats.json
+uv run python -m tamiltts.mlx.extract_variance --data data --mlx data/mlx     # needs durations
+
 # 3. train the acoustic model on the GPU (MLX). Use LR warmup.
 uv run python -m tamiltts.mlx.train_ns --data data/mlx --out runs_mlx_ns --run tamil_ns \
     --steps 60000 --batch 16 --layers 4 --d_model 256 --max_frames 1200 \
@@ -70,14 +74,15 @@ uv run python -m tamiltts.mlx.export_hifigan --weights models/hifigan_lj.bin --o
 uv run python -m tamiltts.mlx.onnx_infer_ns -m models/tamil_ns --text "வணக்கம், இது தமிழ் பேச்சு." -o out.wav
 cd rust && cargo run --release --example synthesize_ns -- "வணக்கம்" out.wav ../models/tamil_ns
 
-# speaking-rate control: scale predicted durations host-side (>1 faster/shorter, <1 slower/longer)
-uv run python -m tamiltts.mlx.onnx_infer_ns -m models/tamil_ns --text "வணக்கம்" -o slow.wav --speed 0.8
-cargo run --release --example synthesize_ns -- "வணக்கம்" fast.wav ../models/tamil_ns 1.25
+# prosody control: speed (durations) + pitch/energy (variance adaptors); 1.0 = natural
+uv run python -m tamiltts.mlx.onnx_infer_ns -m models/tamil_ns --text "வணக்கம்" -o hi.wav --pitch 1.15 --energy 1.2
+cargo run --release --example synthesize_ns -- "வணக்கம்" out.wav ../models/tamil_ns 1.0 1.15 1.2  # speed pitch energy
 ```
 
 `onnx_infer_ns` requires `models/hifigan.onnx` (the neural vocoder). The Rust SDK looks for
-`hifigan.onnx` next to the model prefix. Rate is a free inference-time knob (no retrain); explicit
-pitch/energy control is planned for v0.2 (FastSpeech-2 variance adaptors).
+`hifigan.onnx` next to the model prefix. `speed`/`pitch`/`energy` are inference-time knobs (no
+retrain); pitch/energy come from the FastSpeech-2 variance adaptors and scale in real space (pitch
+usable ~0.8–1.2). `enc_dur.onnx` takes `pitch_scale`/`energy_scale` inputs alongside `tokens`.
 
 ## TensorBoard (progress + audio)
 
