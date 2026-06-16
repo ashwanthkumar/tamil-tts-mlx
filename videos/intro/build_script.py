@@ -36,13 +36,25 @@ SEGMENTS = [
 
 INTRO = 80          # title frames before first clip
 GAP = 16            # frames between clips
+SHOWCASE_TITLE = 80  # frames for the "controllable prosody" title card
 # closing thank-you voice-over, spoken by the model (pure Tamil so it's in-vocab)
 ACK_TEXT = "இந்தத் தரவுத்தொகுப்பைப் பகிர்ந்த சென்னை ஐ.ஐ.டி. குழுவிற்கு எங்களின் மிக்க நன்றி."
 
+# v0.2 prosody showcase: one sentence, re-spoken with different speed/pitch/energy knobs.
+SHOWCASE_TEXT = "தமிழ் ஒரு அழகான மொழி."   # "Tamil is a beautiful language."
+SHOWCASE = [
+    {"label": "Natural", "sub": "speed 1.0 · pitch 1.0 · energy 1.0"},
+    {"label": "Lower pitch", "sub": "pitch 0.85", "pitch": 0.85},
+    {"label": "Higher pitch", "sub": "pitch 1.15", "pitch": 1.15},
+    {"label": "Softer", "sub": "energy 0.7", "energy": 0.7},
+    {"label": "Faster", "sub": "speed 1.25", "speed": 1.25},
+]
 
-def gen(text: str, out: Path):
+
+def gen(text: str, out: Path, speed: float = 1.0, pitch: float = 1.0, energy: float = 1.0):
     subprocess.run(["uv", "run", "python", "-m", "tamiltts.mlx.onnx_infer_ns",
-                    "-m", MODEL, "--text", text, "-o", str(out)],
+                    "-m", MODEL, "--text", text, "-o", str(out),
+                    "--speed", str(speed), "--pitch", str(pitch), "--energy", str(energy)],
                    cwd=ROOT, check=True, capture_output=True)
 
 
@@ -58,6 +70,20 @@ def main():
         segs.append({"file": f.name, "tamil": ta, "en": en, "start": cursor, "dur": df})
         print(f"seg{i:02d}: {dur:.2f}s -> {df}f  start={cursor}  | {en}")
         cursor += df + GAP
+
+    # v0.2 prosody showcase: title card, then the same line at different knob settings
+    showcase_title_start = cursor + GAP
+    cursor = showcase_title_start + SHOWCASE_TITLE
+    shows = []
+    for i, sc in enumerate(SHOWCASE):
+        f = PUB / f"show{i:02d}.wav"
+        gen(SHOWCASE_TEXT, f, speed=sc.get("speed", 1.0), pitch=sc.get("pitch", 1.0), energy=sc.get("energy", 1.0))
+        dur = sf.info(f).frames / sf.info(f).samplerate
+        df = round(dur * FPS)
+        shows.append({"file": f.name, "label": sc["label"], "sub": sc["sub"], "start": cursor, "dur": df})
+        print(f"show{i:02d}: {dur:.2f}s -> {df}f  start={cursor}  | {sc['label']} ({sc['sub']})")
+        cursor += df + GAP
+
     # closing thank-you voice-over
     ack_file = PUB / "ack.wav"
     gen(ACK_TEXT, ack_file)
@@ -69,7 +95,9 @@ def main():
     total = ack_start + ack_window
     script = {"fps": FPS, "width": 1280, "height": 720, "intro": INTRO,
               "ack_start": ack_start, "ack_audio": ack_file.name, "ack_lead": 10,
-              "total": total, "segments": segs}
+              "total": total, "segments": segs,
+              "showcase_title_start": showcase_title_start, "showcase_title": SHOWCASE_TITLE,
+              "showcase_text": SHOWCASE_TEXT, "showcase": shows}
     (SRC / "script.json").write_text(json.dumps(script, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"total {total} frames = {total/FPS:.1f}s -> wrote src/script.json")
 

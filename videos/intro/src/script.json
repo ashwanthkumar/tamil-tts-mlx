@@ -3,101 +3,141 @@
   "width": 1280,
   "height": 720,
   "intro": 80,
-  "ack_start": 1562,
+  "ack_start": 1953,
   "ack_audio": "ack.wav",
   "ack_lead": 10,
-  "total": 1798,
+  "total": 2186,
   "segments": [
     {
       "file": "seg00.wav",
       "tamil": "வணக்கம், இது ஒரு தமிழ் பேச்சு தொகுப்பு மாதிரி.",
       "en": "Hello — this is a Tamil text-to-speech model.",
       "start": 80,
-      "dur": 104
+      "dur": 101
     },
     {
       "file": "seg01.wav",
       "tamil": "நீங்கள் கேட்கும் இந்தக் குரல் முழுவதும் கணினியால் உருவாக்கப்பட்டது.",
       "en": "Every voice you hear is fully machine-generated.",
-      "start": 200,
-      "dur": 129
+      "start": 197,
+      "dur": 132
     },
     {
       "file": "seg02.wav",
       "tamil": "இது சிறிய மாதிரி, ஆனால் எந்த சாதனத்திலும் வேகமாக இயங்கும்.",
       "en": "It's a small model — yet runs fast on any device.",
       "start": 345,
-      "dur": 143
+      "dur": 135
     },
     {
       "file": "seg03.wav",
       "tamil": "தமிழ் ஒரு பழமையான, அழகான மொழி.",
       "en": "Tamil is an ancient, beautiful language.",
-      "start": 504,
-      "dur": 85
+      "start": 496,
+      "dur": 81
     },
     {
       "file": "seg04.wav",
       "tamil": "இன்று வானிலை மிகவும் அழகாக இருக்கிறது.",
       "en": "The weather is lovely today.",
-      "start": 605,
-      "dur": 92
+      "start": 593,
+      "dur": 88
     },
     {
       "file": "seg05.wav",
       "tamil": "எனக்கு புத்தகங்கள் படிக்க மிகவும் பிடிக்கும்.",
       "en": "I really enjoy reading books.",
-      "start": 713,
-      "dur": 85
+      "start": 697,
+      "dur": 84
     },
     {
       "file": "seg06.wav",
       "tamil": "காலை உணவு உடல் நலத்திற்கு மிகவும் முக்கியம்.",
       "en": "Breakfast is very important for health.",
-      "start": 814,
-      "dur": 104
+      "start": 797,
+      "dur": 88
     },
     {
       "file": "seg07.wav",
       "tamil": "நீங்கள் எந்த வாக்கியத்தையும் இங்கே எழுதலாம்.",
       "en": "You can type any sentence here.",
-      "start": 934,
-      "dur": 92
+      "start": 901,
+      "dur": 90
     },
     {
       "file": "seg08.wav",
       "tamil": "செயற்கை நுண்ணறிவு தமிழிலும் வளர்ந்து வருகிறது.",
       "en": "AI is growing in Tamil too.",
-      "start": 1042,
-      "dur": 102
+      "start": 1007,
+      "dur": 99
     },
     {
       "file": "seg09.wav",
       "tamil": "மழை பெய்தால் குடை எடுத்துச் செல்லுங்கள்.",
       "en": "If it rains, take an umbrella.",
-      "start": 1160,
-      "dur": 74
+      "start": 1122,
+      "dur": 73
     },
     {
       "file": "seg10.wav",
       "tamil": "இசை மனதிற்கு மகிழ்ச்சியைத் தருகிறது.",
       "en": "Music brings joy to the mind.",
-      "start": 1250,
-      "dur": 78
+      "start": 1211,
+      "dur": 82
     },
     {
       "file": "seg11.wav",
       "tamil": "கல்வி வாழ்க்கையை மாற்றும் சக்தி கொண்டது.",
       "en": "Education has the power to change life.",
-      "start": 1344,
-      "dur": 83
+      "start": 1309,
+      "dur": 82
     },
     {
       "file": "seg12.wav",
       "tamil": "வருகைக்கு நன்றி, மீண்டும் சந்திப்போம்.",
       "en": "Thanks for watching — see you again!",
-      "start": 1443,
-      "dur": 87
+      "start": 1407,
+      "dur": 83
+    }
+  ],
+  "showcase_title_start": 1522,
+  "showcase_title": 80,
+  "showcase_text": "தமிழ் ஒரு அழகான மொழி.",
+  "showcase": [
+    {
+      "file": "show00.wav",
+      "label": "Natural",
+      "sub": "speed 1.0 · pitch 1.0 · energy 1.0",
+      "start": 1602,
+      "dur": 53
+    },
+    {
+      "file": "show01.wav",
+      "label": "Lower pitch",
+      "sub": "pitch 0.85",
+      "start": 1671,
+      "dur": 53
+    },
+    {
+      "file": "show02.wav",
+      "label": "Higher pitch",
+      "sub": "pitch 1.15",
+      "start": 1740,
+      "dur": 53
+    },
+    {
+      "file": "show03.wav",
+      "label": "Softer",
+      "sub": "energy 0.7",
+      "start": 1809,
+      "dur": 53
+    },
+    {
+      "file": "show04.wav",
+      "label": "Faster",
+      "sub": "speed 1.25",
+      "start": 1878,
+      "dur": 43
     }
   ]
 }

@@ -53,6 +53,31 @@ const Segment: React.FC<{seg: Seg; index: number}> = ({seg, index}) => {
   );
 };
 
+type Show = {file: string; label: string; sub: string; start: number; dur: number};
+
+const ShowcaseClip: React.FC<{show: Show}> = ({show}) => (
+  <Sequence from={show.start} durationInFrames={show.dur + 16}>
+    <Audio src={staticFile(show.file)} />
+    <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center', padding: 96}}>
+      <FadeUp at={3}>
+        <div style={{fontFamily: tamilFont, fontSize: 58, color: '#9fb3c8', textAlign: 'center', marginBottom: 34}}>
+          {(script as {showcase_text: string}).showcase_text}
+        </div>
+      </FadeUp>
+      <FadeUp at={6}>
+        <div style={{fontFamily: SANS, fontSize: 64, color: 'white', fontWeight: 700, textAlign: 'center'}}>
+          {show.label}
+        </div>
+      </FadeUp>
+      <FadeUp at={11}>
+        <div style={{fontFamily: SANS, fontSize: 28, color: ACCENT, marginTop: 18, letterSpacing: 1}}>
+          {show.sub}
+        </div>
+      </FadeUp>
+    </AbsoluteFill>
+  </Sequence>
+);
+
 export const Intro: React.FC = () => {
   const frame = useCurrentFrame();
   const progress = Math.min(frame / script.total, 1);
@@ -86,6 +111,31 @@ export const Intro: React.FC = () => {
 
       {(script.segments as Seg[]).map((seg, i) => (
         <Segment key={i} seg={seg} index={i} />
+      ))}
+
+      {/* v0.2 prosody-control showcase: title card + one line at different knob settings */}
+      <Sequence
+        from={(script as {showcase_title_start: number}).showcase_title_start}
+        durationInFrames={(script as {showcase_title: number}).showcase_title}
+      >
+        <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center'}}>
+          <FadeUp at={6}>
+            <div style={{fontFamily: SANS, fontSize: 21, color: ACCENT, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 22}}>
+              New in v0.2
+            </div>
+          </FadeUp>
+          <FadeUp at={12}>
+            <div style={{fontFamily: SANS, fontSize: 76, color: 'white', fontWeight: 700, textAlign: 'center'}}>Controllable prosody</div>
+          </FadeUp>
+          <FadeUp at={24}>
+            <div style={{fontFamily: SANS, fontSize: 30, color: '#9fb3c8', marginTop: 18, textAlign: 'center'}}>
+              the same line — adjust speed, pitch &amp; energy
+            </div>
+          </FadeUp>
+        </AbsoluteFill>
+      </Sequence>
+      {((script as {showcase: Show[]}).showcase ?? []).map((show, i) => (
+        <ShowcaseClip key={`show${i}`} show={show} />
       ))}
 
       {/* closing acknowledgment / thank-you (with model voice-over) */}
